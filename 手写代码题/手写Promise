@@ -1,0 +1,172 @@
+
+
+const MyPromise = (() => {
+    const PENDING = "pending",
+        RESOLVED = 'resolved',
+        REJECTED = 'rejected',
+        PromiseValue = Symbol('PromiseValue'),
+        PromiseStatus = Symbol('PromiseStatus'),
+        changeStatus = Symbol('changeStatus'),
+        thenables = Symbol('thenables'),
+        catchables = Symbol('catchables'),
+        settleHandle = Symbol('settleHandle'),
+        linkPromise = Symbol('linkPromise')
+        ;
+
+    return class MyPromise {
+
+        [changeStatus](newStatus, newValue, queue) {
+            if (this[PromiseStatus] != PENDING) return;
+            this[PromiseStatus] = newStatus;
+            this[PromiseValue] = newValue;
+
+            queue.forEach(handler => handler(newValue));
+
+
+        }
+
+
+
+        constructor(executor) {
+            this[PromiseValue] = undefined;
+            this[PromiseStatus] = PENDING;
+            this[thenables] = [];
+            this[catchable] = [];
+
+            const resolve = data => {
+                this[changeStatus](RESOLVED, data, this[thenables])
+
+            }
+
+            const reject = reason => {
+                this[changeStatus](REJECTED, reason, this[catchables]);
+            }
+
+            try {
+                executor(resolve, reject);
+            } catch (err) {
+                reject(err);
+            }
+
+        }
+
+        [settleHandle](handler, immediatelyStatus, queue) {
+            if (typeof handler != 'function') return;
+            if (this[PromiseStatus] === immediatelyStatus) {
+
+                setTimeout(() => {
+                    handler(this[PromiseValue]);
+                }, 0)
+            } else {
+                queue.push(handler);
+            }
+        }
+
+        [linkPromise](thenable, catchable) {
+
+            function exec(data, handler, resolve, reject) {
+                try {
+                    const result = handler(data);
+                    if(result instanceof MyPromise) {
+                        result.then(d => {
+                            resolve(d);
+                        }, err => {
+                            reject(err);
+                        })
+                    } else {
+                        resolve(result);
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            }
+
+
+            return new MyPromise((resolve, reject) => {
+                this[settleHandle](data => {
+                    if(typeof thenable !== 'function') {
+                        resolve(data);
+                        return;
+                    }
+                    exec(data, thenable, resolve, reject)
+                }, RESOLVED, this[thenables])
+
+                this[settleHandle](reason => {
+                    if(typeof catchable !== 'function') {
+                        reject(data);
+                        return;
+                    }
+                    exec(reason, catchable, resolve, reject)
+                }, REJECTED, this[catchables]);
+            })
+        }
+
+        then(thenable, catchable) {
+            return this[linkPromise](thenable, catchable);
+        }
+
+        catch(catchable) {
+            return this[linkPromise](undefined, catchable);
+        }
+
+        static resolve(data) {
+            if(data instanceof MyPromise) {
+                return data; 
+            } else {
+                return new MyPromise(resolve => {
+                    resolve(data);
+                })
+            }
+            
+        }
+
+        static reject(reason) {
+            return new MyPromise((resolve, reject) => {
+                reject(reason);
+            })
+        }
+
+        static all(proms) {
+            return new Mypromise((resolve, reject) => {
+                const results = proms.map(p=> {
+                    const obj = {
+                        result: undefined,
+                        isResolved:  false
+                    }
+                    p.then(data => {
+                        obj.result = data;
+                        obj.isResolved = true;
+
+                        const unResolved = results.filter(r => !r.isResolved);
+                        if(unResolved.length == 0) {
+                            resolve(results.map(r => r.result));
+                        } 
+
+                    }, reason => {
+                        reject(reason);
+                    })
+                    return obj;
+                })
+            })
+        }
+
+
+        static race(proms) {
+            return new MyPromise((resolve, reject) => {
+                proms.forEach(p => {
+                    p.then(data => {
+                        resolve(data);
+                    }, err => {
+                        reject(err);
+                    })
+                })
+            })
+        }
+
+
+
+    }
+
+})();
+
+
