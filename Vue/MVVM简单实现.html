@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <!-- <input type="text" id="textInput">
+    输入：<span id="textspan"></span>
+    <script>
+        var obj = {},
+            textInput = document.querySelector('#textInput'),
+            textSpan = document.querySelector('#textSpan')
+
+        Object.defineProperty(obj, 'foo', {
+            set : function (newValue) {
+                textInput.value = newValue;
+                textSpan.innerHTML = newValue;
+            }
+        })
+
+        textInput.addEventListener('keyup', function (e) {
+            obj.foo = e.target.value;
+        })
+    </script> -->
+
+
+
+
+
+
+
+
+
+    <!-- <div id="app">
+        <input type="text" id="a">
+        <span id="b"></span>
+    </div>
+
+    <script>
+
+        var dom = nodeToFragment(document.getElementById('app'));
+        console.log(dom);
+
+        function nodeToFragment(node) {
+            var flag = document.createDocumentFragment();
+            var child;
+            while(child = node.firstChild){
+                flag.appendChild(child);
+            }
+            return flag;
+        }
+
+        document.getElementById('app').appendChild(dom);
+
+    </script> -->
+
+
+
+
+
+
+
+    <div id="app">
+        <input type="text" v-model='text'>
+        {{ text }}
+    </div>
+
+    <script>
+
+
+
+        function Dep() {
+            this.subs = [];
+        }
+
+        Dep.prototype = {
+            addSub: function (sub) {
+                this.subs.push(sub);
+            },
+            notify: function () {
+                this.subs.forEach(function (sub) {
+                    sub.update();
+                })
+            }
+        }
+
+        function Watcher(vm, node, name) {
+            Dep.target = this;
+            this.name = name;
+            this.node = node;
+            this.vm = vm;
+            this.update();
+            Dep.target = null;
+        }
+
+
+        Watcher.prototype = {
+            update: function () {
+                this.get();
+                this.node.nodeValue = this.value;
+            },
+            get: function () {
+                this.value = this.vm[this.name];
+            }
+        }
+
+
+
+        function compile(node, vm) {
+            var reg = /\{\{(.*)\}\}/;
+
+            if (node.nodeType === 1) {
+                var attr = node.attributes;
+                for (var i = 0; i < attr.length; i++) {
+                    if (attr[i].nodeName === 'v-model') {
+                        var name = attr[i].nodeValue;
+
+                        node.addEventListener('input', function (e) {
+                            vm[name] = e.target.value;
+                        })
+
+
+
+                        node.value = vm.data[name];
+                        node.removeAttribute('v-model');
+                    }
+                }
+            }
+
+            if (node.nodeType === 3) {
+                if (reg.test(node.nodeValue)) {
+                    var name = RegExp.$1;
+                    name = name.trim();
+
+                    // node.nodeValue = vm.data[name];
+                    new Watcher(vm, node, name);
+                }
+            }
+        }
+
+
+        
+
+
+        function nodeToFragment(node, vm) {
+            var flag = document.createDocumentFragment();
+            var child;
+            while (child = node.firstChild) {
+                compile(child, vm);
+                flag.appendChild(child);
+            }
+            return flag;
+        }
+
+        function Vue(options) {
+            this.data = options.data;
+
+            var data = this.data;
+            observe(data, this);
+
+
+            var id = options.el;
+            var dom = nodeToFragment(document.getElementById(id), this);
+            document.getElementById(id).appendChild(dom);
+        }
+
+        var vm = new Vue({
+            el: 'app',
+            data: {
+                text: 'hello world'
+            }
+        });
+
+
+
+
+
+        function defineReactive(obj, key, val) {
+            var dep = new Dep();
+
+            Object.defineProperty(obj, key, {
+                get: function () {
+                    if (Dep.target) {
+                        dep.addSub(Dep.target);
+                    }
+
+                    return val;
+                },
+                set: function (newVal) {
+                    if (newVal === val) {
+                        return;
+                    } else {
+                        val = newVal;
+                        dep.notify();
+                    }
+                }
+            })
+        }
+
+
+
+        function observe(obj, vm) {
+            Object.keys(obj).forEach(function (key) {
+                defineReactive(vm, key, obj[key]);
+            })
+        }
+
+
+
+    </script>
+
+
+
+
+
+
+</body>
+
+</html>
