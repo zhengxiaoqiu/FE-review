@@ -1,5 +1,6 @@
 function jsonp (url, params, callback) {
-    return new Promise((resolve, reject) => {      
+    return new Promise((resolve, reject) => {   
+        let script = document.createElement('script');
         window[callback] = function (data) {
             resolve(data);
             document.removeChild(script);
@@ -9,7 +10,6 @@ function jsonp (url, params, callback) {
         for(let prop in params) {
             arr.push(`${prop}=${params[prop]}`)
         }
-        let script = document.createElement('script');
         script.src = `${url}?${arr.join("&")}`;
         document.appendChild(script);
     })
